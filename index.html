@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garden Project - Group 3</title>
+    <style>
+        /* Main Layout and Styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid #4CAF50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+
+        h1 {
+            color: #2E7D32;
+            margin: 0;
+        }
+
+        .status-bar {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .main-display {
+            text-align: center;
+            padding: 30px;
+            border: 1px solid #ddd;
+            background-color: #fafafa;
+            margin-bottom: 20px;
+        }
+
+        #moisture-level {
+            font-size: 60px;
+            font-weight: bold;
+            color: #333;
+            display: block;
+        }
+
+        #moisture-status-text {
+            font-size: 18px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        /* Progress Bar Styles */
+        .progress-container {
+            width: 100%;
+            background-color: #ddd;
+            height: 20px;
+            margin-top: 15px;
+            border: 1px solid #999;
+        }
+
+        #moisture-bar {
+            height: 100%;
+            background-color: #4CAF50; /* Default Green */
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border: 1px dashed #4CAF50;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #999;
+        }
+
+        button {
+            padding: 8px 15px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #1976D2;
+        }
+
+        /* Autocomplete Dropdown */
+        #autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            border: 1px solid #999;
+            background: white;
+            max-height: 100px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        
+        .autocomplete-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #ddd;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border: 1px solid #c62828;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Status Text Color Definitions */
+        .status-good { color: green; }
+        .status-dry { color: orange; }
+        .status-critical { color: red; }
+        .status-wet { color: blue; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>IoT Garden Monitor</h1>
+            <p>CS 101 Final Project</p>
+        </header>
+
+        <div id="error-message" class="error hidden"></div>
+
+        <div class="status-bar">
+            <span>System: <span id="system-status">Connecting...</span></span>
+            <span id="last-updated">Waiting for data...</span>
+        </div>
+
+        <div class="main-display" id="monitor-card">
+            <div>Current Moisture:</div>
+            <span id="moisture-level">--%</span>
+            <div id="moisture-status-text">Loading...</div>
+
+            <div class="progress-container">
+                <div id="moisture-bar"></div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <strong>Current Plant: </strong>
+                <span id="current-plant-display" style="color: #2E7D32;">Not Set</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>Settings</h3>
+            <p style="font-size: 0.9em;">Select plant type to calibrate sensor:</p>
+            
+            <div class="input-group">
+                <input id="plant-input-background" type="text" placeholder="Enter plant name..." autocomplete="off">
+                <button onclick="setPlantThreshold()" id="set-plant-btn">Update</button>
+                <div id="autocomplete-list" class="hidden"></div>
+            </div>
+            <p id="lookup-message" style="color: red; font-size: 0.8em; display: none;">Plant not found.</p>
+        </div>
+    </div>
+
+    <div style="display:none;">
+        <p id="user-id-display">User ID: N/A</p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, Timestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Project Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCgxOavzKP2fIE1K8JjK9RVoZbYceqW03c",
+            authDomain: "nedc-garden.firebaseapp.com",
+            projectId: "nedc-garden",
+            storageBucket: "nedc-garden.firebasestorage.app",
+            messagingSenderId: "145957937517",
+            appId: "1:145957937517:web:c0dcf2595653ec4daeba64"
+        };
+        const initialAuthToken = null; 
+
+        // Application State Variables
+        let db;
+        let auth;
+        let userId = 'N/A';
+        let controllerDocRef;
+        let currentTargetMoisture = 30; 
+
+        // DOM Elements
+        const moistureLevelEl = document.getElementById('moisture-level');
+        const moistureBarEl = document.getElementById('moisture-bar');
+        const moistureStatusTextEl = document.getElementById('moisture-status-text'); 
+        const monitorCardEl = document.getElementById('monitor-card'); 
+        const lastUpdatedEl = document.getElementById('last-updated');
+        const systemStatusEl = document.getElementById('system-status');
+        const errorEl = document.getElementById('error-message');
+        const currentPlantDisplayEl = document.getElementById('current-plant-display');
+
+        // Input and UI Controls
+        const plantInputBackgroundEl = document.getElementById('plant-input-background');
+        const setPlantBtnEl = document.getElementById('set-plant-btn');
+        const lookupMessageEl = document.getElementById('lookup-message');
+        const autocompleteListEl = document.getElementById('autocomplete-list');
+
+        // Plant Database - Threshold Constants
+        const CROP_THRESHOLDS = {
+            "tomato": 50, "basil": 55, "carrot": 40, "lettuce": 65, "spinach": 60,
+            "pepper": 45, "cucumber": 55, "zucchini": 50, "squash": 45, "pumpkin": 50,
+            "bean": 40, "pea": 40, "corn": 50, "potato": 55, "onion": 35,
+            "garlic": 35, "radish": 45, "cabbage": 50, "broccoli": 55, "cauliflower": 55,
+            "kale": 60, "artichoke": 45, "asparagus": 35, "strawberry": 60, "watermelon": 55,
+            "cantaloupe": 50, "blueberry": 65, "raspberry": 55, "grape": 40, "apple": 45,
+            "orange": 40, "lemon": 45, "lime": 40, "wheat": 35, "rice": 70, 
+            "barley": 35, "oats": 35, "alfalfa": 40, "clover": 45, "mint": 60,
+            "thyme": 40, "rosemary": 35, "sage": 35, "oregano": 40, "cilantro": 55,
+            "parsley": 60, "chives": 50, "lavender": 35, "sunflower": 45, "marigold": 40,
+            "petunia": 50, "daisy": 45, "iris": 40, "tulip": 45, "fern": 65,
+            "bamboo": 60, "succulent": 30, "cactus": 30, "microgreens": 65, "ginger": 60,
+            "turmeric": 60, "saffron": 45, "hemp": 40, "arugula": 60, "bok choy": 55, 
+            "brussels sprout": 50, "chard": 60, "collard": 60, "eggplant": 45, "kohlrabi": 50, 
+            "okra": 40, "sweet potato": 50, "turnip": 45, "rutabaga": 40, "huckleberry": 55, 
+            "gooseberry": 50, "currant": 55, "elderberry": 45, "cranberry": 65, "date": 40, 
+            "fig": 45, "avocado": 50, "mango": 40, "pineapple": 50, "kiwi": 55
+        };
+
+        function displayError(message) {
+            console.error("System Error:", message);
+            errorEl.textContent = `Error: ${message}`;
+            errorEl.classList.remove('hidden');
+        }
+
+        // Local Storage for User Preference
+        function saveCropName(cropName) {
+            localStorage.setItem(`current_crop_${userId}`, cropName);
+            currentPlantDisplayEl.textContent = cropName;
+        }
+        function loadCropName() {
+            const cropName = localStorage.getItem(`current_crop_${userId}`);
+            if (cropName) {
+                currentPlantDisplayEl.textContent = cropName;
+            } else {
+                 currentPlantDisplayEl.textContent = "General Plant";
+            }
+        }
+
+        // Initialize Firebase Connection
+        async function initializeFirebase() {
+             if (!firebaseConfig) {
+                 displayError("Configuration Missing");
+                 return;
+             }
+
+             setLogLevel('Silent');
+             try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (auth.currentUser) {
+                    handleSuccessfulAuth(auth.currentUser);
+                    return;
+                }
+                
+                // Anonymous Authentication
+                const userCredential = initialAuthToken 
+                    ? await signInWithCustomToken(auth, initialAuthToken)
+                    : await signInAnonymously(auth);
+
+                handleSuccessfulAuth(userCredential.user);
+
+             } catch (e) {
+                 displayError("Connection Failed - Check Network");
+                 systemStatusEl.textContent = 'Offline';
+                 systemStatusEl.style.color = 'red';
+             }
+        }
+
+        function handleSuccessfulAuth(user) {
+            userId = user.uid;
+            loadCropName();
+
+            // Set Data Reference Path
+            controllerDocRef = doc(db, "garden_data", "sensor_01");
+
+            subscribeToControllerState();
+            systemStatusEl.textContent = 'Connected';
+            systemStatusEl.style.color = 'green';
+        }
+
+        initializeFirebase();
+
+        // Real-time Data Listener
+        function subscribeToControllerState() {
+            onSnapshot(controllerDocRef, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    
+                    currentTargetMoisture = data.target_moisture || 30;
+                    
+                    // Update Visualization
+                    const moisture = Math.max(0, Math.min(100, data.moisture_percent || 0));
+                    moistureLevelEl.textContent = `${moisture.toFixed(0)}%`;
+                    moistureBarEl.style.width = `${moisture}%`;
+
+                    // Logic for Status Feedback
+                    const DRY_THRESHOLD = currentTargetMoisture - 5; 
+                    const CRITICAL_THRESHOLD = currentTargetMoisture - 15;
+                    const WET_THRESHOLD = currentTargetMoisture + 15;
+
+                    // Reset Styles
+                    moistureStatusTextEl.className = "";
+                    moistureBarEl.style.backgroundColor = "#4CAF50"; // Default Green
+
+                    let statusText = "";
+
+                    if (moisture <= CRITICAL_THRESHOLD) {
+                        statusText = "CRITICAL: WATER NOW!";
+                        moistureStatusTextEl.className = "status-critical";
+                        moistureBarEl.style.backgroundColor = "red";
+                    } else if (moisture <= DRY_THRESHOLD) {
+                        statusText = "Soil is Dry - Water Soon";
+                        moistureStatusTextEl.className = "status-dry";
+                        moistureBarEl.style.backgroundColor = "orange";
+                    } else if (moisture >= WET_THRESHOLD) {
+                        statusText = "Soil is Wet - Don't Water";
+                        moistureStatusTextEl.className = "status-wet";
+                        moistureBarEl.style.backgroundColor = "blue";
+                    } else {
+                        statusText = "Soil is Healthy";
+                        moistureStatusTextEl.className = "status-good";
+                        moistureBarEl.style.backgroundColor = "green";
+                    }
+
+                    moistureStatusTextEl.textContent = statusText;
+
+                    if (data.last_watered) {
+                        lastUpdatedEl.textContent = "Data received";
+                    }
+
+                    if (data.current_crop && data.current_crop !== currentPlantDisplayEl.textContent) {
+                         currentPlantDisplayEl.textContent = data.current_crop;
+                         saveCropName(data.current_crop);
+                    }
+
+                } else {
+                    // Initialize Default State if Empty
+                    setDoc(controllerDocRef, {
+                        moisture_percent: 50,
+                        target_moisture: 40,
+                        current_crop: 'General Plant',
+                        last_update_by: userId
+                    }, { merge: true });
+                }
+            }, (error) => {
+                displayError("Data Sync Error");
+            });
+        }
+
+        // Crop Selection Handler
+        window.setPlantThreshold = async function() {
+            if (!controllerDocRef || !userId) return;
+
+            const input = plantInputBackgroundEl.value.trim().toLowerCase();
+            
+            if (!input) return;
+            
+            const targetVWC = CROP_THRESHOLDS[input];
+            
+            if (!targetVWC) {
+                lookupMessageEl.textContent = `Plant "${input}" not in database.`;
+                lookupMessageEl.style.display = 'block';
+                setTimeout(() => lookupMessageEl.style.display = 'none', 3000);
+                return;
+            }
+
+            setPlantBtnEl.textContent = "...";
+            setPlantBtnEl.disabled = true;
+
+            try {
+                const formattedName = input.charAt(0).toUpperCase() + input.slice(1);
+                
+                await setDoc(controllerDocRef, {
+                    target_moisture: targetVWC,
+                    current_crop: formattedName,
+                    last_command: Timestamp.now()
+                }, { merge: true });
+                
+                plantInputBackgroundEl.value = "";
+                saveCropName(formattedName);
+                
+            } catch (e) {
+                displayError("Save failed");
+            } finally {
+                setPlantBtnEl.textContent = "Update";
+                setPlantBtnEl.disabled = false;
+                autocompleteListEl.classList.add('hidden');
+            }
+        }
+        
+        // Autocomplete Logic
+        plantInputBackgroundEl.addEventListener('input', function() {
+            const val = this.value.toLowerCase();
+            autocompleteListEl.innerHTML = '';
+            lookupMessageEl.style.display = 'none';
+            
+            if (!val) {
+                autocompleteListEl.classList.add('hidden');
+                return false;
+            }
+
+            let matches = 0;
+            const cropNames = Object.keys(CROP_THRESHOLDS);
+
+            for (const name of cropNames) {
+                if (name.startsWith(val) || name.includes(' ' + val)) {
+                    if (matches >= 5) break; 
+                    
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.textContent = name.charAt(0).toUpperCase() + name.slice(1); 
+
+                    item.addEventListener('click', function() {
+                        plantInputBackgroundEl.value = name.charAt(0).toUpperCase() + name.slice(1);
+                        autocompleteListEl.classList.add('hidden');
+                    });
+                    
+                    autocompleteListEl.appendChild(item);
+                    matches++;
+                }
+            }
+
+            if (matches > 0) {
+                autocompleteListEl.classList.remove('hidden');
+            } else {
+                autocompleteListEl.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (e.target !== plantInputBackgroundEl && e.target !== autocompleteListEl) {
+                autocompleteListEl.classList.add('hidden');
+            }
+        });
+
+    </script>
+</body>
+</html>
