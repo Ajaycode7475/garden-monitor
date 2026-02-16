@@ -6,53 +6,23 @@
     <title>Smart Garden Monitor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { 
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        
-        .status-pulse {
-            animation: pulse-red 2s infinite;
-        }
+        body { font-family: system-ui, sans-serif; transition: background 0.3s; }
+        .status-pulse { animation: pulse-red 2s infinite; }
         @keyframes pulse-red {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-
-        #autocomplete-container {
-            position: relative;
-        }
         #autocomplete-list {
-            position: absolute;
-            z-index: 50;
-            top: 100%;
-            left: 0;
-            right: 0;
-            max-height: 150px;
-            overflow-y: auto;
-            border-radius: 0 0 8px 8px;
-            background-color: #374151;
-            border: 1px solid #4b5563;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            position: absolute; z-index: 50; top: 100%; left: 0; right: 0;
+            max-height: 150px; overflow-y: auto;
+            background: #374151; border: 1px solid #4b5563; border-radius: 0 0 8px 8px;
         }
-        .autocomplete-item {
-            padding: 10px 12px;
-            cursor: pointer;
-            color: #e5e7eb;
-            font-size: 14px;
-            border-bottom: 1px solid #4b5563;
-        }
-        .autocomplete-item:last-child {
-            border-bottom: none;
-        }
-        .autocomplete-item:hover {
-            background-color: #4b5563;
-            color: white;
-        }
+        .autocomplete-item { padding: 10px; cursor: pointer; color: #e5e7eb; border-bottom: 1px solid #4b5563; }
+        .autocomplete-item:hover { background: #4b5563; color: white; }
     </style>
 </head>
-<body class="bg-gray-900 min-h-screen text-white p-4 font-sans antialiased flex flex-col items-center">
+<body class="bg-gray-900 min-h-screen text-white p-4 font-sans flex flex-col items-center">
 
     <header class="text-center mb-8 w-full max-w-md">
         <h1 class="text-3xl font-extrabold text-teal-400 tracking-wider">Garden Monitor</h1>
@@ -60,31 +30,25 @@
     </header>
     
     <div class="mb-6 w-full max-w-md flex justify-between items-center px-2 text-xs text-gray-500">
-        <span id="system-status" class="text-blue-400 transition">Connecting...</span>
-        <span id="last-updated">Waiting for data...</span>
+        <span id="system-status" class="text-blue-400">Connecting...</span>
+        <span id="last-updated">Waiting...</span>
     </div>
 
     <div id="error-message" class="hidden w-full max-w-md bg-red-900/50 border border-red-700 p-3 mb-4 rounded-lg text-red-200 text-sm text-center"></div>
 
     <main class="w-full max-w-md space-y-6">
-
         <div id="monitor-card" class="bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700 relative overflow-hidden">
-            
             <div id="advice-banner" class="absolute top-0 left-0 right-0 h-2 bg-gray-600 transition-colors duration-500"></div>
-
             <div class="text-center mt-2">
                 <h2 class="text-gray-400 text-sm font-semibold uppercase tracking-widest mb-1">Current Moisture</h2>
-                
                 <div class="relative py-6">
                     <span id="moisture-level" class="text-7xl font-bold text-white tracking-tighter">--%</span>
-                    <p id="moisture-status-text" class="text-xl font-medium mt-2 text-gray-400 transition-colors duration-300">Loading...</p>
+                    <p id="moisture-status-text" class="text-xl font-medium mt-2 text-gray-400">Loading...</p>
                 </div>
             </div>
-
             <div class="w-full bg-gray-700 rounded-full h-3 mt-4 overflow-hidden">
                 <div id="moisture-bar" class="h-full rounded-full transition-all duration-700 ease-out bg-gray-500" style="width: 0%;"></div>
             </div>
-
             <div class="mt-8 pt-6 border-t border-gray-700 text-center">
                 <p class="text-xs text-gray-500 mb-2">Monitored Plant</p>
                 <div class="inline-flex items-center bg-gray-900 rounded-full px-4 py-1 border border-gray-700">
@@ -95,32 +59,23 @@
 
         <div class="bg-gray-800/50 p-5 rounded-xl border border-gray-700/50">
             <h3 class="text-sm font-semibold text-gray-400 mb-3">Change Plant Type</h3>
-            <p class="text-xs text-gray-500 mb-3">Select your crop to calibrate the "Water Now" advice.</p>
-
             <div id="autocomplete-container" class="relative">
                 <div class="flex space-x-2">
-                    <input id="plant-input-background" type="text" placeholder="e.g. Tomato, Basil..." class="flex-grow p-3 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm outline-none transition" autocomplete="off" />
-                    <button onclick="setPlantThreshold()" class="bg-teal-600 hover:bg-teal-500 text-white font-semibold px-5 rounded-lg shadow-lg transition text-sm" id="set-plant-btn">Save</button>
+                    <input id="plant-input-background" type="text" placeholder="e.g. Tomato, Basil..." class="flex-grow p-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-teal-500 outline-none" autocomplete="off" />
+                    <button onclick="setPlantThreshold()" class="bg-teal-600 hover:bg-teal-500 text-white font-semibold px-5 rounded-lg shadow-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed" id="set-plant-btn">Save</button>
                 </div>
                 <div id="autocomplete-list" class="hidden"></div>
             </div>
-            
-             <p id="lookup-message" class="text-center text-xs text-red-400 mt-2 hidden">Crop not found.</p>
+            <p id="lookup-message" class="text-center text-xs text-red-400 mt-2 hidden">Crop not found.</p>
         </div>
-        
     </main>
-
-    <div class="hidden">
-        <p id="user-id-display">User ID: N/A</p>
-        <p id="debug-path-display">Path: sensor_01</p>
-    </div>
-
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, Timestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- BROWSER KEY CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyCgxOavzKP2fIE1K8JjK9RVoZbYceqW03c",
             authDomain: "nedc-garden.firebaseapp.com",
@@ -129,282 +84,158 @@
             messagingSenderId: "145957937517",
             appId: "1:145957937517:web:c0dcf2595653ec4daeba64"
         };
-        const initialAuthToken = null; 
 
-        let db;
-        let auth;
-        let userId = 'N/A';
-        let controllerDocRef;
-        let currentTargetMoisture = 30; 
+        let db, auth, userId = 'N/A', controllerDocRef, currentTargetMoisture = 30;
 
-        const moistureLevelEl = document.getElementById('moisture-level');
-        const moistureBarEl = document.getElementById('moisture-bar');
-        const moistureStatusTextEl = document.getElementById('moisture-status-text'); 
-        const adviceBannerEl = document.getElementById('advice-banner');
-        const monitorCardEl = document.getElementById('monitor-card');
-        const lastUpdatedEl = document.getElementById('last-updated');
-        const systemStatusEl = document.getElementById('system-status');
-        const errorEl = document.getElementById('error-message');
-        const currentPlantDisplayEl = document.getElementById('current-plant-display');
-
-        const plantInputBackgroundEl = document.getElementById('plant-input-background');
-        const setPlantBtnEl = document.getElementById('set-plant-btn');
-        const lookupMessageEl = document.getElementById('lookup-message');
-        const autocompleteListEl = document.getElementById('autocomplete-list');
-
-        const CROP_THRESHOLDS = {
-            "tomato": 50, "basil": 55, "carrot": 40, "lettuce": 65, "spinach": 60,
-            "pepper": 45, "cucumber": 55, "zucchini": 50, "squash": 45, "pumpkin": 50,
-            "bean": 40, "pea": 40, "corn": 50, "potato": 55, "onion": 35,
-            "garlic": 35, "radish": 45, "cabbage": 50, "broccoli": 55, "cauliflower": 55,
-            "kale": 60, "artichoke": 45, "asparagus": 35, "strawberry": 60, "watermelon": 55,
-            "cantaloupe": 50, "blueberry": 65, "raspberry": 55, "grape": 40, "apple": 45,
-            "orange": 40, "lemon": 45, "lime": 40, "wheat": 35, "rice": 70, 
-            "barley": 35, "oats": 35, "alfalfa": 40, "clover": 45, "mint": 60,
-            "thyme": 40, "rosemary": 35, "sage": 35, "oregano": 40, "cilantro": 55,
-            "parsley": 60, "chives": 50, "lavender": 35, "sunflower": 45, "marigold": 40,
-            "petunia": 50, "daisy": 45, "iris": 40, "tulip": 45, "fern": 65,
-            "bamboo": 60, "succulent": 30, "cactus": 30, "microgreens": 65, "ginger": 60,
-            "turmeric": 60, "saffron": 45, "hemp": 40, "arugula": 60, "bok choy": 55, 
-            "brussels sprout": 50, "chard": 60, "collard": 60, "eggplant": 45, "kohlrabi": 50, 
-            "okra": 40, "sweet potato": 50, "turnip": 45, "rutabaga": 40, "huckleberry": 55, 
-            "gooseberry": 50, "currant": 55, "elderberry": 45, "cranberry": 65, "date": 40, 
-            "fig": 45, "avocado": 50, "mango": 40, "pineapple": 50, "kiwi": 55
+        const ui = {
+            level: document.getElementById('moisture-level'),
+            bar: document.getElementById('moisture-bar'),
+            text: document.getElementById('moisture-status-text'),
+            banner: document.getElementById('advice-banner'),
+            card: document.getElementById('monitor-card'),
+            updated: document.getElementById('last-updated'),
+            status: document.getElementById('system-status'),
+            error: document.getElementById('error-message'),
+            plantDisplay: document.getElementById('current-plant-display'),
+            input: document.getElementById('plant-input-background'),
+            btn: document.getElementById('set-plant-btn'),
+            msg: document.getElementById('lookup-message'),
+            list: document.getElementById('autocomplete-list')
         };
 
-        function displayError(message) {
-            console.error("APP ERROR:", message);
-            let cleanMsg = message.replace("Firebase: ", "").replace(" (auth/internal-error)", "");
-            if (message.includes("referrer")) cleanMsg = "Security Block: Domain not allowed in Cloud Console.";
-            
-            errorEl.textContent = cleanMsg;
-            errorEl.classList.remove('hidden');
+        const CROP_THRESHOLDS = {
+            "tomato": 50, "basil": 55, "carrot": 40, "lettuce": 65, "spinach": 60, "pepper": 45, 
+            "cucumber": 55, "zucchini": 50, "bean": 40, "pea": 40, "corn": 50, "potato": 55, 
+            "onion": 35, "garlic": 35, "radish": 45, "cabbage": 50, "broccoli": 55, "kale": 60, 
+            "strawberry": 60, "watermelon": 55, "mint": 60, "thyme": 40, "rosemary": 35, 
+            "cactus": 15, "succulent": 20, "fern": 70, "orchid": 40, "snake plant": 20
+        };
+
+        function displayError(msg) {
+            console.error(msg);
+            let clean = msg.replace("Firebase: ", "");
+            if (msg.includes("referrer")) clean = "Security Block: Check Cloud Console restrictions.";
+            ui.error.textContent = clean;
+            ui.error.classList.remove('hidden');
         }
 
-        function saveCropName(cropName) {
-            localStorage.setItem(`current_crop_${userId}`, cropName);
-            currentPlantDisplayEl.textContent = cropName;
-        }
-        function loadCropName() {
-            const cropName = localStorage.getItem(`current_crop_${userId}`);
-            if (cropName) {
-                currentPlantDisplayEl.textContent = cropName;
-            } else {
-                 currentPlantDisplayEl.textContent = "General Plant";
-            }
-        }
-        
-        async function initializeFirebase() {
-             if (!firebaseConfig) {
-                 displayError("Config Missing");
-                 return;
-             }
-
-             setLogLevel('Silent'); 
-             try {
+        async function init() {
+            setLogLevel('Silent');
+            try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-
-                await new Promise((resolve, reject) => {
-                    const unsubscribe = onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            handleSuccessfulAuth(user);
-                            resolve();
-                            unsubscribe();
-                        } else {
-                            signInAnonymously(auth).catch(reject);
-                        }
-                    });
-                });
-
-             } catch (e) {
-                 displayError(e.message); 
-                 systemStatusEl.textContent = 'Connection Failed';
-                 systemStatusEl.classList.replace('text-blue-400', 'text-red-500');
-             }
-        }
-
-        function handleSuccessfulAuth(user) {
-            userId = user.uid;
-            loadCropName();
-
-            controllerDocRef = doc(db, "garden_data", "sensor_01");
-
-            subscribeToControllerState();
-            systemStatusEl.textContent = 'Monitoring Active';
-            systemStatusEl.classList.replace('text-blue-400', 'text-green-400');
-        }
-
-        initializeFirebase();
-
-        function subscribeToControllerState() {
-            onSnapshot(controllerDocRef, (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    
-                    currentTargetMoisture = data.target_moisture || 30;
-                    
-                    const moisture = Math.max(0, Math.min(100, data.moisture_percent || 0));
-                    moistureLevelEl.textContent = `${moisture.toFixed(0)}%`;
-                    moistureBarEl.style.width = `${moisture}%`;
-
-                    const DRY_THRESHOLD = currentTargetMoisture - 5; 
-                    const CRITICAL_THRESHOLD = currentTargetMoisture - 15;
-                    const WET_THRESHOLD = currentTargetMoisture + 15;
-
-                    moistureStatusTextEl.className = "text-xl font-medium mt-2 transition-colors duration-300";
-                    adviceBannerEl.className = "absolute top-0 left-0 right-0 h-2 transition-colors duration-500";
-                    moistureBarEl.className = "h-full rounded-full transition-all duration-700 ease-out";
-                    monitorCardEl.classList.remove('status-pulse', 'border-red-500');
-                    monitorCardEl.classList.add('border-gray-700');
-
-                    let statusText = "";
-                    let colorClass = "";
-                    let barColor = "";
-                    let bannerColor = "";
-
-                    if (moisture <= CRITICAL_THRESHOLD) {
-                        statusText = "CRITICALLY DRY: WATER NOW";
-                        colorClass = "text-red-500 font-bold";
-                        barColor = "bg-red-600";
-                        bannerColor = "bg-red-600";
-                        monitorCardEl.classList.add('status-pulse', 'border-red-500');
-                        monitorCardEl.classList.remove('border-gray-700');
-                    } else if (moisture <= DRY_THRESHOLD) {
-                        statusText = "Soil is Dry - Water Soon";
-                        colorClass = "text-yellow-400";
-                        barColor = "bg-yellow-500";
-                        bannerColor = "bg-yellow-500";
-                    } else if (moisture >= WET_THRESHOLD) {
-                        statusText = "Soil is Wet - Do Not Water";
-                        colorClass = "text-blue-400";
-                        barColor = "bg-blue-500";
-                        bannerColor = "bg-blue-500";
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        controllerDocRef = doc(db, "garden_data", "sensor_01");
+                        subscribe();
+                        ui.status.textContent = 'Monitoring Active';
+                        ui.status.classList.replace('text-blue-400', 'text-green-400');
                     } else {
-                        statusText = "Soil is Healthy";
-                        colorClass = "text-teal-400";
-                        barColor = "bg-teal-500";
-                        bannerColor = "bg-teal-500";
+                        signInAnonymously(auth).catch(e => displayError(e.message));
                     }
+                });
+            } catch (e) { displayError(e.message); }
+        }
 
-                    moistureStatusTextEl.textContent = statusText;
-                    moistureStatusTextEl.classList.add(...colorClass.split(' '));
-                    moistureBarEl.classList.add(barColor);
-                    adviceBannerEl.classList.add(bannerColor);
+        function subscribe() {
+            onSnapshot(controllerDocRef, (doc) => {
+                if (!doc.exists()) return;
+                const data = doc.data();
+                currentTargetMoisture = data.target_moisture || 30;
+                const moisture = Math.max(0, Math.min(100, data.moisture_percent || 0));
 
-                    if (data.last_watered) { 
-                        lastUpdatedEl.textContent = "Live Updates On";
-                    }
+                ui.level.textContent = `${moisture.toFixed(0)}%`;
+                ui.bar.style.width = `${moisture}%`;
 
-                    if (data.current_crop && data.current_crop !== currentPlantDisplayEl.textContent) {
-                         currentPlantDisplayEl.textContent = data.current_crop;
-                         saveCropName(data.current_crop);
-                    }
-
+                // Logic
+                const DRY = currentTargetMoisture - 10;
+                const WET = currentTargetMoisture + 10;
+                
+                ui.card.className = "bg-gray-800 p-8 rounded-2xl shadow-2xl border relative overflow-hidden transition-all duration-500";
+                
+                if (moisture < DRY) {
+                    ui.text.textContent = "WATER ME!";
+                    ui.text.className = "text-xl font-bold mt-2 text-red-500";
+                    ui.bar.className = "h-full rounded-full transition-all bg-red-600";
+                    ui.banner.className = "absolute top-0 left-0 right-0 h-2 bg-red-600";
+                    ui.card.classList.add('border-red-500', 'status-pulse');
+                } else if (moisture > WET) {
+                    ui.text.textContent = "TOO WET!";
+                    ui.text.className = "text-xl font-bold mt-2 text-blue-400";
+                    ui.bar.className = "h-full rounded-full transition-all bg-blue-500";
+                    ui.banner.className = "absolute top-0 left-0 right-0 h-2 bg-blue-500";
+                    ui.card.classList.add('border-blue-500');
                 } else {
-                    setDoc(controllerDocRef, {
-                        moisture_percent: 50,
-                        target_moisture: 40,
-                        current_crop: 'General Plant',
-                        last_update_by: userId
-                    }, { merge: true });
+                    ui.text.textContent = "HEALTHY";
+                    ui.text.className = "text-xl font-bold mt-2 text-teal-400";
+                    ui.bar.className = "h-full rounded-full transition-all bg-teal-500";
+                    ui.banner.className = "absolute top-0 left-0 right-0 h-2 bg-teal-500";
+                    ui.card.classList.add('border-gray-700');
                 }
-            }, (error) => {
-                displayError(error.message); 
+
+                if (data.last_watered) ui.updated.textContent = "Live";
+                if (data.current_crop) ui.plantDisplay.textContent = data.current_crop;
             });
         }
 
         window.setPlantThreshold = async function() {
-            if (!controllerDocRef || !userId) return;
-
-            const input = plantInputBackgroundEl.value.trim().toLowerCase();
-            if (!input) return;
-            
-            const targetVWC = CROP_THRESHOLDS[input];
-            
-            if (!targetVWC) {
-                lookupMessageEl.textContent = `Plant "${input}" not found in database.`;
-                lookupMessageEl.classList.remove('hidden');
-                setTimeout(() => lookupMessageEl.classList.add('hidden'), 3000);
+            const input = ui.input.value.trim().toLowerCase();
+            const target = CROP_THRESHOLDS[input];
+            if (!target) {
+                ui.msg.textContent = "Crop not found."; ui.msg.classList.remove('hidden');
                 return;
             }
 
-            setPlantBtnEl.textContent = "Saving...";
-            setPlantBtnEl.disabled = true;
+            // --- 5 SECOND TIMER LOGIC ---
+            const originalText = "Save";
+            ui.btn.disabled = true;
+            let countdown = 5;
+            ui.btn.textContent = `Syncing (${countdown})...`;
+            
+            const timer = setInterval(() => {
+                countdown--;
+                ui.btn.textContent = `Syncing (${countdown})...`;
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    ui.btn.textContent = originalText;
+                    ui.btn.disabled = false;
+                }
+            }, 1000);
 
             try {
-                const formattedName = input.charAt(0).toUpperCase() + input.slice(1);
-                
+                const name = input.charAt(0).toUpperCase() + input.slice(1);
                 await setDoc(controllerDocRef, {
-                    target_moisture: targetVWC,
-                    current_crop: formattedName,
+                    target_moisture: target,
+                    current_crop: name,
                     last_command: Timestamp.now()
                 }, { merge: true });
-                
-                plantInputBackgroundEl.value = "";
-                saveCropName(formattedName);
-                
-            } catch (e) {
-                displayError("Save failed: " + e.message);
-            } finally {
-                setPlantBtnEl.textContent = "Save";
-                setPlantBtnEl.disabled = false;
-                autocompleteListEl.classList.add('hidden');
-            }
+                ui.input.value = "";
+                ui.list.classList.add('hidden');
+            } catch (e) { displayError("Save failed"); }
         }
+
         
-        plantInputBackgroundEl.addEventListener('input', function() {
+        ui.input.addEventListener('input', function() {
             const val = this.value.toLowerCase();
-            autocompleteListEl.innerHTML = '';
-            lookupMessageEl.classList.add('hidden');
+            ui.list.innerHTML = ''; ui.msg.classList.add('hidden');
+            if (!val) { ui.list.classList.add('hidden'); return; }
             
-            if (!val) {
-                autocompleteListEl.classList.add('hidden');
-                return false;
-            }
-
-            let matches = 0;
-            const cropNames = Object.keys(CROP_THRESHOLDS);
-
-            for (const name of cropNames) {
-                if (name.startsWith(val) || name.includes(' ' + val)) {
-                    if (matches >= 5) break; 
-                    
+            Object.keys(CROP_THRESHOLDS).forEach(name => {
+                if (name.includes(val)) {
                     const item = document.createElement('div');
                     item.className = 'autocomplete-item';
-                    
-                    const matchIndex = name.indexOf(val);
-                    const beforeMatch = name.substr(0, matchIndex);
-                    const afterMatch = name.substr(matchIndex + val.length);
-
-                    item.innerHTML = beforeMatch.charAt(0).toUpperCase() + beforeMatch.slice(1) + 
-                                     '<span class="text-teal-400 font-bold">' + name.substr(matchIndex, val.length) + '</span>' + 
-                                     afterMatch;
-
-                    item.addEventListener('click', function() {
-                        plantInputBackgroundEl.value = name.charAt(0).toUpperCase() + name.slice(1);
-                        autocompleteListEl.classList.add('hidden');
-                    });
-                    
-                    autocompleteListEl.appendChild(item);
-                    matches++;
+                    item.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+                    item.onclick = () => { ui.input.value = item.textContent; ui.list.classList.add('hidden'); };
+                    ui.list.appendChild(item);
                 }
-            }
-
-            if (matches > 0) {
-                autocompleteListEl.classList.remove('hidden');
-            } else {
-                autocompleteListEl.classList.add('hidden');
-            }
+            });
+            ui.list.classList.remove('hidden');
         });
-
-        document.addEventListener('click', function(e) {
-            if (e.target !== plantInputBackgroundEl && e.target !== autocompleteListEl) {
-                autocompleteListEl.classList.add('hidden');
-            }
-        });
-
+        
+        init();
     </script>
 </body>
 </html>
