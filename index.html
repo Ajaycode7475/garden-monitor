@@ -6,13 +6,11 @@
     <title>Smart Garden Monitor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Minimalist Font Stack */
         body { 
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             transition: background-color 0.3s, color 0.3s;
         }
         
-        /* Pulse for Critical Status */
         .status-pulse {
             animation: pulse-red 2s infinite;
         }
@@ -22,7 +20,6 @@
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
-        /* Autocomplete Styling */
         #autocomplete-container {
             position: relative;
         }
@@ -35,14 +32,14 @@
             max-height: 150px;
             overflow-y: auto;
             border-radius: 0 0 8px 8px;
-            background-color: #374151; /* Gray-700 */
-            border: 1px solid #4b5563; /* Gray-600 */
+            background-color: #374151;
+            border: 1px solid #4b5563;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
         }
         .autocomplete-item {
             padding: 10px 12px;
             cursor: pointer;
-            color: #e5e7eb; /* Gray-200 */
+            color: #e5e7eb;
             font-size: 14px;
             border-bottom: 1px solid #4b5563;
         }
@@ -50,7 +47,7 @@
             border-bottom: none;
         }
         .autocomplete-item:hover {
-            background-color: #4b5563; /* Gray-600 */
+            background-color: #4b5563;
             color: white;
         }
     </style>
@@ -124,7 +121,6 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, Timestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- YOUR FIREBASE CONFIGURATION (Fixed for NEDC-Garden) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCgxOavzKP2fIE1K8JjK9RVoZbYceqW03c",
             authDomain: "nedc-garden.firebaseapp.com",
@@ -139,9 +135,8 @@
         let auth;
         let userId = 'N/A';
         let controllerDocRef;
-        let currentTargetMoisture = 30; // Default reference point
+        let currentTargetMoisture = 30; 
 
-        // --- UI ELEMENTS ---
         const moistureLevelEl = document.getElementById('moisture-level');
         const moistureBarEl = document.getElementById('moisture-bar');
         const moistureStatusTextEl = document.getElementById('moisture-status-text'); 
@@ -152,14 +147,11 @@
         const errorEl = document.getElementById('error-message');
         const currentPlantDisplayEl = document.getElementById('current-plant-display');
 
-        // Autocomplete/Lookup Elements
         const plantInputBackgroundEl = document.getElementById('plant-input-background');
         const setPlantBtnEl = document.getElementById('set-plant-btn');
         const lookupMessageEl = document.getElementById('lookup-message');
         const autocompleteListEl = document.getElementById('autocomplete-list');
 
-
-        // --- INTERNAL CROP DATABASE (Used for advice calibration) ---
         const CROP_THRESHOLDS = {
             "tomato": 50, "basil": 55, "carrot": 40, "lettuce": 65, "spinach": 60,
             "pepper": 45, "cucumber": 55, "zucchini": 50, "squash": 45, "pumpkin": 50,
@@ -182,11 +174,13 @@
 
         function displayError(message) {
             console.error("APP ERROR:", message);
-            errorEl.textContent = `${message}`;
+            let cleanMsg = message.replace("Firebase: ", "").replace(" (auth/internal-error)", "");
+            if (message.includes("referrer")) cleanMsg = "Security Block: Domain not allowed in Cloud Console.";
+            
+            errorEl.textContent = cleanMsg;
             errorEl.classList.remove('hidden');
         }
 
-        // --- PLANT NAME MANAGEMENT ---
         function saveCropName(cropName) {
             localStorage.setItem(`current_crop_${userId}`, cropName);
             currentPlantDisplayEl.textContent = cropName;
@@ -199,8 +193,6 @@
                  currentPlantDisplayEl.textContent = "General Plant";
             }
         }
-
-        // --- INITIALIZATION ---
         
         async function initializeFirebase() {
              if (!firebaseConfig) {
@@ -208,26 +200,27 @@
                  return;
              }
 
-             setLogLevel('Silent'); // Reduce console noise
+             setLogLevel('Silent'); 
              try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                if (auth.currentUser) {
-                    handleSuccessfulAuth(auth.currentUser);
-                    return;
-                }
-                
-                const userCredential = initialAuthToken 
-                    ? await signInWithCustomToken(auth, initialAuthToken)
-                    : await signInAnonymously(auth);
-
-                handleSuccessfulAuth(userCredential.user);
+                await new Promise((resolve, reject) => {
+                    const unsubscribe = onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            handleSuccessfulAuth(user);
+                            resolve();
+                            unsubscribe();
+                        } else {
+                            signInAnonymously(auth).catch(reject);
+                        }
+                    });
+                });
 
              } catch (e) {
-                 displayError("Connection Failed");
-                 systemStatusEl.textContent = 'Offline';
+                 displayError(e.message); 
+                 systemStatusEl.textContent = 'Connection Failed';
                  systemStatusEl.classList.replace('text-blue-400', 'text-red-500');
              }
         }
@@ -236,8 +229,6 @@
             userId = user.uid;
             loadCropName();
 
-            // --- CRITICAL FIX: CONNECTING TO HARDWARE PATH ---
-            // This ensures it talks to the same 'sensor_01' your friend is coding for
             controllerDocRef = doc(db, "garden_data", "sensor_01");
 
             subscribeToControllerState();
@@ -247,30 +238,21 @@
 
         initializeFirebase();
 
-
-        // --- FIREBASE LISTENERS (STATE) ---
-
         function subscribeToControllerState() {
             onSnapshot(controllerDocRef, (doc) => {
                 if (doc.exists()) {
                     const data = doc.data();
                     
-                    // Reference threshold for advice logic
                     currentTargetMoisture = data.target_moisture || 30;
                     
-                    // Update Moisture Data
                     const moisture = Math.max(0, Math.min(100, data.moisture_percent || 0));
                     moistureLevelEl.textContent = `${moisture.toFixed(0)}%`;
                     moistureBarEl.style.width = `${moisture}%`;
 
-                    // --- ADVICE LOGIC (The "When to Water" part) ---
-                    // "Healthy" range is roughly +/- 10% of the target
-                    
                     const DRY_THRESHOLD = currentTargetMoisture - 5; 
                     const CRITICAL_THRESHOLD = currentTargetMoisture - 15;
                     const WET_THRESHOLD = currentTargetMoisture + 15;
 
-                    // Reset Classes
                     moistureStatusTextEl.className = "text-xl font-medium mt-2 transition-colors duration-300";
                     adviceBannerEl.className = "absolute top-0 left-0 right-0 h-2 transition-colors duration-500";
                     moistureBarEl.className = "h-full rounded-full transition-all duration-700 ease-out";
@@ -311,20 +293,16 @@
                     moistureBarEl.classList.add(barColor);
                     adviceBannerEl.classList.add(bannerColor);
 
-
-                    // Update Last Updated Timestamp
                     if (data.last_watered) { 
                         lastUpdatedEl.textContent = "Live Updates On";
                     }
 
-                    // Sync crop name if updated from another device
                     if (data.current_crop && data.current_crop !== currentPlantDisplayEl.textContent) {
                          currentPlantDisplayEl.textContent = data.current_crop;
                          saveCropName(data.current_crop);
                     }
 
                 } else {
-                    // Create default if missing
                     setDoc(controllerDocRef, {
                         moisture_percent: 50,
                         target_moisture: 40,
@@ -333,21 +311,15 @@
                     }, { merge: true });
                 }
             }, (error) => {
-                displayError("Data Sync Error");
+                displayError(error.message); 
             });
         }
-
-        // --- CROP CALIBRATION ---
 
         window.setPlantThreshold = async function() {
             if (!controllerDocRef || !userId) return;
 
             const input = plantInputBackgroundEl.value.trim().toLowerCase();
-            
-            if (!input) {
-                // Just close if empty
-                return;
-            }
+            if (!input) return;
             
             const targetVWC = CROP_THRESHOLDS[input];
             
@@ -374,7 +346,7 @@
                 saveCropName(formattedName);
                 
             } catch (e) {
-                displayError("Save failed");
+                displayError("Save failed: " + e.message);
             } finally {
                 setPlantBtnEl.textContent = "Save";
                 setPlantBtnEl.disabled = false;
@@ -382,7 +354,6 @@
             }
         }
         
-        // --- AUTOCOMPLETE LOGIC ---
         plantInputBackgroundEl.addEventListener('input', function() {
             const val = this.value.toLowerCase();
             autocompleteListEl.innerHTML = '';
@@ -403,7 +374,6 @@
                     const item = document.createElement('div');
                     item.className = 'autocomplete-item';
                     
-                    // Simple highlighting
                     const matchIndex = name.indexOf(val);
                     const beforeMatch = name.substr(0, matchIndex);
                     const afterMatch = name.substr(matchIndex + val.length);
@@ -415,8 +385,6 @@
                     item.addEventListener('click', function() {
                         plantInputBackgroundEl.value = name.charAt(0).toUpperCase() + name.slice(1);
                         autocompleteListEl.classList.add('hidden');
-                        // Optional: Auto-submit on click? 
-                        // Let's require the "Save" button for clarity in this mode
                     });
                     
                     autocompleteListEl.appendChild(item);
@@ -431,7 +399,6 @@
             }
         });
 
-        // Close autocomplete when clicking outside
         document.addEventListener('click', function(e) {
             if (e.target !== plantInputBackgroundEl && e.target !== autocompleteListEl) {
                 autocompleteListEl.classList.add('hidden');
