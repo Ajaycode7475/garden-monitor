@@ -1,76 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Garden Monitor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: system-ui, sans-serif; transition: background 0.3s; }
-        .status-pulse { animation: pulse-red 2s infinite; }
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-        #autocomplete-list {
-            position: absolute; z-index: 50; top: 100%; left: 0; right: 0;
-            max-height: 150px; overflow-y: auto;
-            background: #374151; border: 1px solid #4b5563; border-radius: 0 0 8px 8px;
-        }
-        .autocomplete-item { padding: 10px; cursor: pointer; color: #e5e7eb; border-bottom: 1px solid #4b5563; }
-        .autocomplete-item:hover { background: #4b5563; color: white; }
-    </style>
-</head>
-<body class="bg-gray-900 min-h-screen text-white p-4 font-sans flex flex-col items-center">
-
-    <header class="text-center mb-8 w-full max-w-md">
-        <h1 class="text-3xl font-extrabold text-teal-400 tracking-wider">Garden Monitor</h1>
-        <p class="text-sm text-gray-400 mt-1">Smart Moisture Tracking</p>
-    </header>
-    
-    <div class="mb-6 w-full max-w-md flex justify-between items-center px-2 text-xs text-gray-500">
-        <span id="system-status" class="text-blue-400">Connecting...</span>
-        <span id="last-updated">Waiting...</span>
-    </div>
-
-    <div id="error-message" class="hidden w-full max-w-md bg-red-900/50 border border-red-700 p-3 mb-4 rounded-lg text-red-200 text-sm text-center"></div>
-
-    <main class="w-full max-w-md space-y-6">
-        <div id="monitor-card" class="bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700 relative overflow-hidden">
-            <div id="advice-banner" class="absolute top-0 left-0 right-0 h-2 bg-gray-600 transition-colors duration-500"></div>
-            <div class="text-center mt-2">
-                <h2 class="text-gray-400 text-sm font-semibold uppercase tracking-widest mb-1">Current Moisture</h2>
-                <div class="relative py-6">
-                    <span id="moisture-level" class="text-7xl font-bold text-white tracking-tighter">--%</span>
-                    <p id="moisture-status-text" class="text-xl font-medium mt-2 text-gray-400">Loading...</p>
-                </div>
-            </div>
-            <div class="w-full bg-gray-700 rounded-full h-3 mt-4 overflow-hidden">
-                <div id="moisture-bar" class="h-full rounded-full transition-all duration-700 ease-out bg-gray-500" style="width: 0%;"></div>
-            </div>
-            <div class="mt-8 pt-6 border-t border-gray-700 text-center">
-                <p class="text-xs text-gray-500 mb-2">Monitored Plant</p>
-                <div class="inline-flex items-center bg-gray-900 rounded-full px-4 py-1 border border-gray-700">
-                    <span id="current-plant-display" class="text-teal-400 font-medium text-sm">Not Set</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-gray-800/50 p-5 rounded-xl border border-gray-700/50">
-            <h3 class="text-sm font-semibold text-gray-400 mb-3">Change Plant Type</h3>
-            <div id="autocomplete-container" class="relative">
-                <div class="flex space-x-2">
-                    <input id="plant-input-background" type="text" placeholder="e.g. Tomato, Basil..." class="flex-grow p-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-teal-500 outline-none" autocomplete="off" />
-                    <button onclick="setPlantThreshold()" class="bg-teal-600 hover:bg-teal-500 text-white font-semibold px-5 rounded-lg shadow-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed" id="set-plant-btn">Save</button>
-                </div>
-                <div id="autocomplete-list" class="hidden"></div>
-            </div>
-            <p id="lookup-message" class="text-center text-xs text-red-400 mt-2 hidden">Crop not found.</p>
-        </div>
-    </main>
-
-    <script type="module">
+<script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, Timestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -119,8 +47,21 @@
             ui.error.classList.remove('hidden');
         }
 
+        // --- NEW: PERMANENT LOCAL STORAGE ---
+        function saveLocalCrop(name) {
+            localStorage.setItem('garden_saved_crop', name);
+            ui.plantDisplay.textContent = name;
+        }
+
+        function loadLocalCrop() {
+            const saved = localStorage.getItem('garden_saved_crop');
+            if (saved) ui.plantDisplay.textContent = saved;
+        }
+
         async function init() {
             setLogLevel('Silent');
+            loadLocalCrop(); // Load immediately on startup
+            
             try {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -142,15 +83,26 @@
 
         function subscribe() {
             onSnapshot(controllerDocRef, (doc) => {
-                if (!doc.exists()) return;
+                if (!doc.exists()) {
+                    // Create default if missing
+                    setDoc(controllerDocRef, { current_crop: "General Plant" }, { merge: true });
+                    return;
+                }
                 const data = doc.data();
+                
+                // 1. Update Crop Name (FORCE UPDATE)
+                const cloudCrop = data.current_crop || "General Plant";
+                ui.plantDisplay.textContent = cloudCrop;
+                saveLocalCrop(cloudCrop);
+
+                // 2. Update Moisture
                 currentTargetMoisture = data.target_moisture || 30;
                 const moisture = Math.max(0, Math.min(100, data.moisture_percent || 0));
 
                 ui.level.textContent = `${moisture.toFixed(0)}%`;
                 ui.bar.style.width = `${moisture}%`;
 
-                // Logic
+                // 3. Status Logic
                 const DRY = currentTargetMoisture - 10;
                 const WET = currentTargetMoisture + 10;
                 
@@ -177,7 +129,6 @@
                 }
 
                 if (data.last_watered) ui.updated.textContent = "Live";
-                if (data.current_crop) ui.plantDisplay.textContent = data.current_crop;
             });
         }
 
@@ -189,7 +140,6 @@
                 return;
             }
 
-            // --- 5 SECOND TIMER LOGIC ---
             const originalText = "Save";
             ui.btn.disabled = true;
             let countdown = 5;
@@ -207,17 +157,21 @@
 
             try {
                 const name = input.charAt(0).toUpperCase() + input.slice(1);
+                // Optimistic Update (Update screen instantly before cloud confirms)
+                ui.plantDisplay.textContent = name; 
+                saveLocalCrop(name);
+                
                 await setDoc(controllerDocRef, {
                     target_moisture: target,
                     current_crop: name,
                     last_command: Timestamp.now()
                 }, { merge: true });
+                
                 ui.input.value = "";
                 ui.list.classList.add('hidden');
             } catch (e) { displayError("Save failed"); }
         }
 
-        
         ui.input.addEventListener('input', function() {
             const val = this.value.toLowerCase();
             ui.list.innerHTML = ''; ui.msg.classList.add('hidden');
@@ -237,5 +191,3 @@
         
         init();
     </script>
-</body>
-</html>
